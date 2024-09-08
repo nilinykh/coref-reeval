@@ -97,7 +97,8 @@ def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_si
     use_oracle_model = (model_path == 'oracle')
     model = None
     if not use_oracle_model:
-        model = MT5ForConditionalGeneration.from_pretrained(model_path)
+        #model = MT5ForConditionalGeneration.from_pretrained(model_path)
+        model = MT5ForConditionalGeneration.from_pretrained(model_path, device_map='auto', torch_dtype=torch.bfloat16)
         model = model.to(device='cuda')
         model.eval()
     
