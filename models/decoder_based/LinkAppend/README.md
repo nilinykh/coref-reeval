@@ -9,8 +9,12 @@ This directory contains our reimplementation of the LinkAppend model from the pa
 First create the environment using conda (or the local requirements.txt):
 ```bash
 conda create -y -n linkappend_env python=3.11 pytorch torchvision torchaudio pytorch-cuda=12.1
+FIX: conda create -y -n linkappend_env python=3.11 pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 conda activate linkappend_env
 conda install -y transformers=4.37.2 datasets wandb hydra-core sentencepiece
+FIX: conda install conda-forge::hydra-core
+FIX: conda install conda-forge::wandb
+FIX: conda install -y transformers=4.37.2 datasets sentencepiece
 ```
 
 Then download the model weights from ['mt5-coref-pytorch/link-append-xxl'](https://huggingface.co/mt5-coref-pytorch/link-append-xxl). These were converted from the released t5x checkpoint to HuggingFace using [convert_t5x_checkpoint_to_flax.py](https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/convert_t5x_checkpoint_to_flax.py).

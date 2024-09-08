@@ -93,7 +93,7 @@ stack-data==0.6.3
 stanza==1.7.0
 sympy==1.12
 thinc==8.2.3
-thinc-apple-ops==0.1.4
+#thinc-apple-ops==0.1.4
 tokenizers==0.15.1
 toml==0.10.2
 torch==2.2.0
