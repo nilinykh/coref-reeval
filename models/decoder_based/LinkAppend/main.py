@@ -8,6 +8,8 @@ import logging
 import os
 import time
 
+from IPython import embed
+
 import click
 import torch
 from data.dataset_io import (add_coreference_column,
@@ -79,14 +81,17 @@ def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_si
     elif dataset_name == 'preco':
         dataset = load_dataset('coref-data/preco_indiscrim')
         documents = dataset[split]
+    elif dataset_name == 'vwp_randomsample_20':
+        with open('/home/xilini/coref/multimodal_coref/data/nikolai_test_out/randomsample_20/link-append/inputs_random20.json', 'r') as f:
+            documents = json.load(f)
     else:
         dataset = load_dataset('coref-data/conll2012_indiscrim', 'english_v4')
         documents = dataset[split]
 
-    documents = documents.sort("id")
+    #documents = documents.sort("id")
     
-    if subset > 0:
-        documents = documents.select(list(range(subset_start, subset)))
+    #if subset > 0:
+    #    documents = documents.select(list(range(subset_start, subset)))
         
     logger.info('Total number of document parts: %d' % len(documents))
     
@@ -99,7 +104,7 @@ def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_si
     if not use_oracle_model:
         #model = MT5ForConditionalGeneration.from_pretrained(model_path)
         model = MT5ForConditionalGeneration.from_pretrained(model_path, device_map='auto', torch_dtype=torch.bfloat16)
-        model = model.to(device='cuda')
+        #model = model.to(device='cuda')
         model.eval()
     
     saved_examples = [] # save all input/output pairs
