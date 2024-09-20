@@ -85,6 +85,9 @@ def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_si
         with open('/home/xilini/coref/multimodal_coref/data/nikolai_test_out/randomsample_20/link-append/inputs_random20.json', 'r') as f:
         #with open('/home/xilini/tell-me-more-coref/test/inputs_random20.json', 'r') as f:
             documents = json.load(f)
+    elif dataset_name == 'tmm':
+        with open('/home/xilini/tell-me-more-coref/run1/inputs_tmm_537.json', 'r') as f:
+            documents = json.load(f)
     else:
         dataset = load_dataset('coref-data/conll2012_indiscrim', 'english_v4')
         documents = dataset[split]
