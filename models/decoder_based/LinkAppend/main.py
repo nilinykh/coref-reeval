@@ -50,6 +50,7 @@ def batch_model_input_to_output(tokenizer, model, input_tok_ids, max_new_tokens,
 @click.command() # TODO: move config to hydra?
 @click.option('--tokenizer_path', default='google/mt5-xxl')
 @click.option('--model_path',     default='scratch/mt5_coref/mt5') # set to 'oracle' to generate the training set
+@click.option('--input_dir',      default=None)
 @click.option('--output_dir',     default='output')
 @click.option('--split',          default='train')
 @click.option('--batch_size',     default=1, type=int)
@@ -59,37 +60,53 @@ def batch_model_input_to_output(tokenizer, model, input_tok_ids, max_new_tokens,
 @click.option('--subset_start', default=0, type=int) # calculate subset of documents
 @click.option('--no_pound_symbol', is_flag=True)
 @click.option('--dataset_name',        default='conll2012')
-def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_size, max_new_tokens, subset, subset_start,
+def main(tokenizer_path, model_path, input_dir, output_dir, split, batch_size, max_input_size, max_new_tokens, subset, subset_start,
          no_pound_symbol, dataset_name):
     """Run inference using the MT5 shift-reduce model."""
 
-    logger.info('Loading dataset.')
-    if dataset_name == 'ontogum':
-        dataset = load_dataset('coref-data/gum_indiscrim', 'ontogum')
-        documents = dataset[split]
-    elif dataset_name == 'gum':
-        dataset = load_dataset('coref-data/gum_indiscrim', 'original')
-        documents = dataset[split]
-    elif dataset_name == 'arrau':
-        dataset = load_dataset('coref-data/arrau_indiscrim')
-        documents = dataset[split]
-    elif dataset_name == 'litbank':
-        dataset = load_dataset('coref-data/litbank_indiscrim', 'split_0')
-        documents = dataset[split]
-    elif dataset_name == 'preco':
-        dataset = load_dataset('coref-data/preco_indiscrim')
-        documents = dataset[split]
-    elif dataset_name == "ontonotes_chinese":
-        dataset = load_dataset('coref-data/conll2012_indiscrim', 'chinese_v4')
-        documents = dataset[split]
+    # If input_dir is provided, load from local JSON files
+    if input_dir:
+        logger.info(f'Loading documents from directory: {input_dir}')
+        documents = []
+        for filename in sorted(os.listdir(input_dir)):
+            if not filename.endswith('.json'):
+                continue
+            filepath = os.path.join(input_dir, filename)
+            logger.info(f'Loading file: {filename}')
+            with open(filepath, 'r') as f:
+                file_docs = json.load(f)
+                documents.extend(file_docs)
+        dataset_name = 'local_json'
     else:
-        dataset = load_dataset('coref-data/conll2012_indiscrim', 'english_v4')
-        documents = dataset[split]
-
-    documents = documents.sort("id")
+        logger.info('Loading dataset from HuggingFace.')
+        if dataset_name == 'ontogum':
+            dataset = load_dataset('coref-data/gum_indiscrim', 'ontogum')
+            documents = dataset[split]
+        elif dataset_name == 'gum':
+            dataset = load_dataset('coref-data/gum_indiscrim', 'original')
+            documents = dataset[split]
+        elif dataset_name == 'arrau':
+            dataset = load_dataset('coref-data/arrau_indiscrim')
+            documents = dataset[split]
+        elif dataset_name == 'litbank':
+            dataset = load_dataset('coref-data/litbank_indiscrim', 'split_0')
+            documents = dataset[split]
+        elif dataset_name == 'preco':
+            dataset = load_dataset('coref-data/preco_indiscrim')
+            documents = dataset[split]
+        elif dataset_name == "ontonotes_chinese":
+            dataset = load_dataset('coref-data/conll2012_indiscrim', 'chinese_v4')
+            documents = dataset[split]
+        else:
+            dataset = load_dataset('coref-data/conll2012_indiscrim', 'english_v4')
+            documents = dataset[split]
+        documents = documents.sort("id")
     
     if subset > 0:
-        documents = documents.select(list(range(subset_start, subset)))
+        if hasattr(documents, 'select'):
+            documents = documents.select(list(range(subset_start, subset)))
+        else:
+            documents = documents[subset_start:subset]
         
     logger.info('Total number of document parts: %d' % len(documents))
     
@@ -100,8 +117,8 @@ def main(tokenizer_path, model_path, output_dir, split, batch_size, max_input_si
     use_oracle_model = (model_path == 'oracle')
     model = None
     if not use_oracle_model:
-        model = MT5ForConditionalGeneration.from_pretrained(model_path)
-        model = model.to(device='cuda')
+        model = MT5ForConditionalGeneration.from_pretrained(
+            model_path, device_map='auto', torch_dtype=torch.bfloat16)
         model.eval()
     
     saved_examples = [] # save all input/output pairs
